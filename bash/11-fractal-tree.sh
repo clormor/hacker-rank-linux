@@ -1,8 +1,8 @@
 max_n=5
 height=$(((2 ** (max_n + 1)) - 1))
 width=100
-empty="_"
-thing="1"
+empty_char="_"
+tree_char="1"
 
 # Given a tree level {x:1..max_n} returns the number of rows (height) required to draw the {x}th iteration
 # of the fractal tree. The height of the 1st iteration is set at 2*max_n.
@@ -137,15 +137,15 @@ print_line() {
    do
        for i in $(seq $current_position $((x - 1)))
        do
-           printf $empty
+           printf $empty_char
        done
-       printf $thing
+       printf $tree_char
        current_position=$((x + 1))
    done
 
    for i in $(seq $current_position $width)
    do
-       printf $empty
+       printf $empty_char
    done
    printf '\n'
 }
@@ -153,17 +153,9 @@ print_line() {
 print_blank_line() {
     for i in $(seq 1 $width)
     do
-        printf $empty
+        printf $empty_char
     done
     printf '\n'
-}
-
-print_something() {
-    local n_level=$1
-}
-
-print_xs_array() {
-    echo "${xs_array[@]}"
 }
 
 read n
