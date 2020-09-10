@@ -3,23 +3,8 @@ height=$(((2 ** (max_n + 1)) - 1))
 width=100
 empty_char="_"
 tree_char="1"
-
-# Given a tree level {x:1..max_n} returns the number of rows (height) required to draw the {x}th iteration
-# of the fractal tree. The height of the 1st iteration is set at 2*max_n.
-# e.g. if max_n=5:
-#    the 1st iteration of the fractal tree has height 32
-#    the 2nd iteration of the fractal tree has height 16
-#    ... and so on
-n_height() {
-    local n_level=$1
-    local result=$((2 ** max_n))
-    while [[ $n_level -gt 1 ]]
-    do
-        local result=$((result / 2))
-        local n_level=$((n_level - 1))
-    done
-    echo $result
-}
+sum_heights_array=(32 48 56 60 62)
+branch_height_arr=(16 40 52 58 61)
 
 # Given a row number {x:1..height}, returns an integer {1..max_n} according to which level of the tree this row is in
 # e.g if max_n=5:
@@ -28,18 +13,18 @@ n_height() {
 #     row 63 is in the 1st level of the tree (n_level_for 63 == 1)
 n_level_for() {
     local row=$1
-    local sum_heights=0
-    for i in $(seq 1 $max_n)
+    local result=1
+    for sum_height in ${sum_heights_array[@]}
     do
-        local n_height=$(n_height $i)
-        local sum_heights=$((sum_heights + n_height))
-        if [[ $row -gt $((height - sum_heights)) ]]
+        if [[ $row -gt $((height - sum_height)) ]]
         then
-            echo $i
+            echo $result
             return
+        else
+            result=$((result + 1))
         fi
     done
-    echo $((max_n + 1))
+    echo $result
 }
 
 # Stores the result of xs_for() (see below)
@@ -70,30 +55,11 @@ xs_for_level() {
     fi
 }
 
-# Determine the branching height of the current tree level
-branch_height() {
-    local level=$1
-    local preceeding_level=$((level - 1))
-    local result=0
-
-    # add up the heights of the preceeding levels
-    for i in $(seq 1 $preceeding_level)
-    do
-        local n_height=$(n_height $i)
-        result=$((result + n_height))
-    done
-
-    # add half the height of this level (we branch half way up)
-    local n_height=$(n_height $level)
-    result=$((result + (n_height / 2)))
-    echo $result
-}
-
-# Given a row determine the branching factor
+# Given a row / tree level, determine the branching factor
 branching_factor() {
     local row=$1
-    local current_level=$(n_level_for $row)
-    local branch_height=$(branch_height $current_level)
+    local current_level=$2
+    local branch_height=${branch_height_arr[$((current_level - 1))]}
     local row_to_branch=$((height - branch_height))
     if [[ $row -gt $row_to_branch ]]
     then
@@ -110,13 +76,19 @@ branching_factor() {
 # The result is captured in a global array (xs_array), since returning arrays is not really a thing in bash
 xs_for_row() {
     local row=$1
+    local n=$2
     
     # figure out which level we're in, and determine the relevant cells
     local n_level=$(n_level_for $row)
+    if [[ $n_level -gt $n ]]
+    then
+        xs_array=()
+        return
+    fi
     xs_for_level $n_level
 
     # now figure out where we are in the level (e.g. branching or otherwise) and if branching to what degree
-    local branching_factor=$(branching_factor $row)
+    local branching_factor=$(branching_factor $row $n_level)
     if [[ $branching_factor -gt 0 ]]
     then
         # for every x-coordinate, create two new co-cordinates (x - branching factor), (x + branching_factor)
@@ -131,7 +103,7 @@ xs_for_row() {
     fi
 }
 
-print_line() {
+print_row() {
    local current_position=1
    for x in ${xs_array[@]}
    do
@@ -150,23 +122,9 @@ print_line() {
    printf '\n'
 }
 
-print_blank_line() {
-    for i in $(seq 1 $width)
-    do
-        printf $empty_char
-    done
-    printf '\n'
-}
-
 read n
 for row in $(seq 1 $height)
 do
-    n_level=$(n_level_for $row)
-    if [[ $n_level > $n ]]
-    then
-        print_blank_line
-    else
-        xs_for_row $row
-        print_line $n_level
-    fi
+    xs_for_row $row $n
+    print_row
 done
